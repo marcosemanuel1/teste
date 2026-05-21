@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0a0a0f" />
+<title>Minha Lista de Espera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          display: ["Bebas Neue", "cursive"],
+          body:    ["DM Sans", "sans-serif"],
+          mono:    ["DM Mono", "monospace"],
+        },
+        colors: {
+          base:    "#0a0a0f",
+          surface: "#111118",
+          card:    "#16161f",
+          border:  "#1f1f2e",
+          accent:  "#e8432d",
+          gold:    "#f5a623",
+          text:    "#e2e2ea",
+          muted:   "#6b6b80",
+        },
+        animation: {
+          "fade-in":  "fadeIn .3s ease forwards",
+          "slide-up": "slideUp .38s cubic-bezier(.22,1,.36,1) forwards",
+          "scale-in": "scaleIn .25s ease forwards",
+          "shimmer":  "shimmer 1.5s infinite",
+        },
+        keyframes: {
+          fadeIn:  { from:{ opacity:0 }, to:{ opacity:1 } },
+          slideUp: { from:{ opacity:0, transform:"translateY(28px)" }, to:{ opacity:1, transform:"translateY(0)" } },
+          scaleIn: { from:{ opacity:0, transform:"scale(.92)" }, to:{ opacity:1, transform:"scale(1)" } },
+          shimmer: { "0%,100%":{ opacity:.4 }, "50%":{ opacity:.8 } },
+        }
+      }
+    }
+  }
+</script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: #0a0a0f;
+    color: #e2e2ea;
+    font-family: "DM Sans", sans-serif;
+    min-height: 100dvh;
+    overscroll-behavior: none;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #0a0a0f; }
+  ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 2px; }
+
+  .grain::after {
+    content:"";
+    position:fixed; inset:0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events:none; z-index:9999; opacity:.6;
+  }
+
+  .hero-bg {
+    background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232,67,45,.12) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(245,166,35,.05) 0%, transparent 60%),
+                #0a0a0f;
+  }
+
+  .tab-btn { position:relative; white-space:nowrap; }
+  .tab-btn.active { color:#e2e2ea; }
+  .tab-btn.active::after {
+    content:""; position:absolute; bottom:-1px; left:0; right:0;
+    height:2px; background:#e8432d; border-radius:2px;
+  }
+
+  .star-input input { display:none; }
+  .star-input label {
+    cursor:pointer; font-size:1.8rem; color:#2a2a3a;
+    transition:color .15s; padding: 4px;
+    min-width: 44px; min-height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .star-input input:checked ~ label,
+  .star-input label:hover,
+  .star-input label:hover ~ label { color:#f5a623; }
+  .star-input { display:flex; flex-direction:row-reverse; }
+
+  .stars-display span { color:#2a2a3a; }
+  .stars-display span.lit { color:#f5a623; }
+
+  @media (hover: hover) {
+    .media-card { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+    .media-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,.5); border-color: #2a2a3a; }
+  }
+  @media (hover: none) {
+    .media-card:active { opacity: 0.82; transform: scale(0.985); transition: opacity .1s, transform .1s; }
+  }
+  .media-card { border: 1px solid #1f1f2e; }
+
+  .modal-backdrop { backdrop-filter: blur(8px); background: rgba(0,0,0,.7); }
+
+  .sheet-handle {
+    width: 36px; height: 4px;
+    background: #2a2a3a; border-radius: 2px;
+    margin: 0 auto 12px;
+  }
+
+  .field {
+    background: #0d0d15;
+    border: 1px solid #1f1f2e;
+    color: #e2e2ea;
+    border-radius: .5rem;
+    padding: .75rem .9rem;
+    width: 100%;
+    transition: border-color .2s;
+    outline: none;
+    font-family: "DM Sans", sans-serif;
+    font-size: 1rem;
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 48px;
+  }
+  .field:focus { border-color: #e8432d; }
+  .field option { background: #111118; }
+
+  .badge {
+    font-size: .65rem; font-weight: 600; letter-spacing: .06em;
+    text-transform: uppercase; padding: .2rem .5rem; border-radius: .25rem;
+  }
+
+  #toast {
+    transition: opacity .3s, transform .3s;
+    opacity: 0; transform: translateY(10px);
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+
+  .skeleton {
+    background: linear-gradient(90deg, #16161f 25%, #1f1f2e 50%, #16161f 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: .75rem;
+  }
+
+  .empty-deco { font-size: 4rem; line-height: 1; filter: grayscale(1) opacity(.3); }
+
+  .action-btn {
+    min-width: 44px; min-height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .tabs-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs-scroll::-webkit-scrollbar { display: none; }
+
+  .bottom-nav-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(17,17,24,0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid #1f1f2e;
+    z-index: 40;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  button, a { -webkit-tap-highlight-color: transparent; }
+
+  .main-content {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  #modal-inner {
+    max-height: 92dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-tab { color: #6b6b80; transition: color .15s; }
+  .nav-tab.active-nav { color: #e8432d; }
+</style>
+</head>
+<body class="grain hero-bg">
+
+<!-- SETUP BANNER -->
+<div id="setup-banner" class="bg-gold/10 border-b border-gold/20 px-4 py-2.5 text-center text-sm text-gold/90 hidden">
+  ⚠️ <strong>Configure o Apps Script URL</strong> — edite a variável <code class="bg-black/30 px-1 rounded font-mono text-xs">SCRIPT_URL</code> no JS.
+  <button onclick="document.getElementById('setup-banner').remove()" class="ml-2 text-gold/60 hover:text-gold text-lg leading-none">✕</button>
+</div>
+
+<!-- HEADER -->
+<header class="sticky top-0 z-50 border-b border-border bg-base/80 backdrop-blur-md">
+  <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3"
+       style="padding-top: env(safe-area-inset-top, 0px)">
+    <h1 class="font-display text-2xl tracking-wider text-text shrink-0">
+      LISTA<span class="text-accent">.</span>
+    </h1>
+    <div class="relative flex-1 max-w-sm">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input id="search" type="text" placeholder="Buscar…" class="field pl-9 py-2 text-sm" style="min-height:40px" oninput="renderCards()" autocomplete="off" autocorrect="off" autocapitalize="off" />
+    </div>
+    <!-- Visible on desktop only -->
+    <button onclick="openModal()" class="hidden sm:flex items-center gap-2 bg-accent hover:bg-accent/80 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors shrink-0">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+      <span>Adicionar</span>
+    </button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="max-w-6xl mx-auto px-4 py-5 main-content">
+
+  <!-- Stats -->
+  <div id="stats-bar" class="flex flex-wrap gap-x-4 gap-y-1 mb-5 text-sm opacity-0 transition-opacity duration-500">
+    <span class="text-muted">Total: <strong class="text-text" id="stat-total">0</strong></span>
+    <span class="text-muted">Filmes: <strong class="text-text" id="stat-filmes">0</strong></span>
+    <span class="text-muted">Séries: <strong class="text-text" id="stat-series">0</strong></span>
+    <span class="text-muted">Assistidos: <strong class="text-accent" id="stat-watched">0</strong></span>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="tabs-scroll mb-5 border-b border-border pb-0 -mx-4 px-4">
+    <div class="flex gap-5 min-w-max">
+      <button data-filter="todos"     class="tab-btn active text-sm font-medium pb-3 text-muted transition-colors" onclick="setFilter('todos',this)">Todos</button>
+      <button data-filter="Filme"     class="tab-btn text-sm font-medium pb-3 text-muted transition-colors" onclick="setFilter('Filme',this)">Filmes</button>
+      <button data-filter="Série"     class="tab-btn text-sm font-medium pb-3 text-muted transition-colors" onclick="setFilter('Série',this)">Séries</button>
+      <button data-filter="assistido" class="tab-btn text-sm font-medium pb-3 text-muted transition-colors" onclick="setFilter('assistido',this)">✓ Assistidos</button>
+    </div>
+  </div>
+
+  <!-- Cards grid -->
+  <div id="cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+    <div class="skeleton h-36 col-span-full sm:col-span-1"></div>
+    <div class="skeleton h-36 hidden sm:block"></div>
+    <div class="skeleton h-36 hidden lg:block"></div>
+    <div class="skeleton h-36 hidden xl:block"></div>
+  </div>
+
+  <!-- Empty state -->
+  <div id="empty-state" class="hidden flex-col items-center justify-center py-24 text-center">
+    <div class="empty-deco mb-4">🎬</div>
+    <p class="text-muted text-lg font-medium mb-1">Nenhum item encontrado</p>
+    <p class="text-muted/60 text-sm mb-6">Adicione um filme ou série para começar.</p>
+    <button onclick="openModal()" class="bg-accent hover:bg-accent/80 text-white px-5 py-3 rounded-xl text-sm font-medium transition-colors">
+      + Adicionar primeiro item
+    </button>
+  </div>
+</main>
+
+<!-- BOTTOM NAV (mobile only) -->
+<nav class="bottom-nav-bar sm:hidden">
+  <div class="flex items-center justify-around px-2 pt-2 pb-2">
+    <button data-nav="todos" onclick="setFilterNav('todos', this)"
+      class="nav-tab active-nav flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+      <span class="text-[10px] font-medium">Todos</span>
+    </button>
+    <button data-nav="Filme" onclick="setFilterNav('Filme', this)"
+      class="nav-tab flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/></svg>
+      <span class="text-[10px] font-medium">Filmes</span>
+    </button>
+    <!-- FAB -->
+    <button onclick="openModal()"
+      class="flex items-center justify-center w-14 h-14 bg-accent rounded-full shadow-lg shadow-accent/30 -mt-6 transition-transform active:scale-95">
+      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+    </button>
+    <button data-nav="Série" onclick="setFilterNav('Série', this)"
+      class="nav-tab flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+      <span class="text-[10px] font-medium">Séries</span>
+    </button>
+    <button data-nav="assistido" onclick="setFilterNav('assistido', this)"
+      class="nav-tab flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="text-[10px] font-medium">Vistos</span>
+    </button>
+  </div>
+</nav>
+
+<!-- MODAL (bottom sheet on mobile) -->
+<div id="modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+  <div class="modal-backdrop absolute inset-0" onclick="closeModal()"></div>
+  <div id="modal-inner" class="relative bg-card border border-border rounded-t-3xl sm:rounded-2xl w-full sm:max-w-lg animate-slide-up shadow-2xl">
+
+    <div class="sheet-handle sm:hidden mt-3"></div>
+
+    <div class="flex items-center justify-between px-5 pt-2 sm:pt-5 pb-4 border-b border-border">
+      <h2 id="modal-title" class="font-display text-2xl tracking-wide">NOVO ITEM</h2>
+      <button onclick="closeModal()" class="action-btn text-muted hover:text-text transition-colors rounded-xl">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <form id="item-form" class="px-5 py-4 space-y-4" onsubmit="submitForm(event)">
+      <input type="hidden" id="form-id" />
+
+      <div>
+        <label class="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Título *</label>
+        <input id="form-titulo" type="text" required placeholder="Ex: Dune: Part Two" class="field" autocomplete="off" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Tipo *</label>
+          <select id="form-tipo" required class="field">
+            <option value="">Selecione</option>
+            <option value="Filme">🎬 Filme</option>
+            <option value="Série">📺 Série</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Gênero</label>
+          <select id="form-genero" class="field">
+            <option value="">Selecione</option>
+            <option>Ação</option><option>Aventura</option><option>Animação</option>
+            <option>Comédia</option><option>Crime</option><option>Documentário</option>
+            <option>Drama</option><option>Fantasia</option><option>Ficção Científica</option>
+            <option>Horror</option><option>Musical</option><option>Romance</option>
+            <option>Suspense</option><option>Terror</option><option>Thriller</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Plataforma</label>
+          <select id="form-plataforma" class="field">
+            <option value="">Selecione</option>
+            <option>Netflix</option><option>Prime Video</option><option>Disney+</option>
+            <option>Max</option><option>Apple TV+</option><option>Globoplay</option>
+            <option>Paramount+</option><option>Crunchyroll</option><option>Cinema</option>
+            <option>YouTube</option><option>Outro</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Status</label>
+          <select id="form-status" class="field">
+            <option value="Quero Assistir">⏳ Quero Assistir</option>
+            <option value="Já Assistido">✅ Já Assistido</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-muted uppercase tracking-wider mb-2">Expectativa</label>
+        <div class="star-input" id="star-input">
+          <input type="radio" id="s5" name="nota" value="5"><label for="s5">★</label>
+          <input type="radio" id="s4" name="nota" value="4"><label for="s4">★</label>
+          <input type="radio" id="s3" name="nota" value="3"><label for="s3">★</label>
+          <input type="radio" id="s2" name="nota" value="2"><label for="s2">★</label>
+          <input type="radio" id="s1" name="nota" value="1" checked><label for="s1">★</label>
+        </div>
+      </div>
+
+      <div class="pt-1 flex gap-3 pb-2">
+        <button type="button" onclick="closeModal()"
+          class="flex-1 border border-border text-muted py-3 rounded-xl text-sm font-medium transition-colors" style="min-height:48px">
+          Cancelar
+        </button>
+        <button type="submit" id="form-submit-btn"
+          class="flex-1 bg-accent text-white py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50" style="min-height:48px">
+          Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TOAST — positioned above bottom nav -->
+<div id="toast"
+  class="fixed left-1/2 -translate-x-1/2 z-[100] bg-surface border border-border rounded-full px-5 py-3 text-sm font-medium shadow-xl flex items-center gap-2 pointer-events-none whitespace-nowrap"
+  style="bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px))">
+  <span id="toast-icon">✓</span>
+  <span id="toast-msg">Salvo com sucesso</span>
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwR7MggacTXKmEX2qGP7f7zWRIKb-IonJ7n6Nkcp9ErN3AIrpQryOkPWTJOte6O4jQn/exec";
+
+let items = [];
+let activeFilter = "todos";
+let editingId = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (SCRIPT_URL === "COLE_AQUI_A_URL_DO_SEU_APPS_SCRIPT") {
+    document.getElementById("setup-banner").classList.remove("hidden");
+    loadDemo();
+    return;
+  }
+  fetchItems();
+});
+
+async function fetchItems() {
+  showSkeletons();
+  try {
+    const res  = await fetch(`${SCRIPT_URL}?action=getAll`);
+    const data = await res.json();
+    items = data.items || [];
+    renderAll();
+  } catch (e) {
+    showToast("Erro ao carregar dados 😢", "error");
+    items = [];
+    renderAll();
+  }
+}
+
+async function apiPost(payload) {
+  const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+  return res.json();
+}
+
+async function submitForm(e) {
+  e.preventDefault();
+  const btn = document.getElementById("form-submit-btn");
+  btn.disabled = true; btn.textContent = "Salvando…";
+
+  const nota = document.querySelector("input[name=nota]:checked")?.value || "1";
+  const payload = {
+    titulo:     document.getElementById("form-titulo").value.trim(),
+    tipo:       document.getElementById("form-tipo").value,
+    genero:     document.getElementById("form-genero").value,
+    plataforma: document.getElementById("form-plataforma").value,
+    nota:       parseInt(nota),
+    status:     document.getElementById("form-status").value,
+  };
+
+  try {
+    if (editingId) {
+      payload.id = editingId;
+      await apiPost({ action: "update", payload });
+      const idx = items.findIndex(i => i.id === editingId);
+      if (idx !== -1) items[idx] = { ...items[idx], ...payload };
+      showToast("✏️ Atualizado!");
+    } else {
+      const res = await apiPost({ action: "add", payload });
+      items.unshift({ id: res.id, ...payload, criadoEm: new Date().toISOString() });
+      showToast("🎬 Adicionado à lista!");
+    }
+    renderAll();
+    closeModal();
+  } catch (err) {
+    showToast("Erro ao salvar 😢", "error");
+  } finally {
+    btn.disabled = false; btn.textContent = "Salvar";
+  }
+}
+
+async function markWatched(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const newStatus = item.status === "Já Assistido" ? "Quero Assistir" : "Já Assistido";
+  try {
+    await apiPost({ action: "update", payload: { id, status: newStatus } });
+    item.status = newStatus;
+    renderAll();
+    showToast(newStatus === "Já Assistido" ? "✅ Marcado como assistido!" : "⏳ Movido para a fila");
+  } catch {
+    showToast("Erro ao atualizar 😢", "error");
+  }
+}
+
+async function deleteItem(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  if (!confirm(`Remover "${item.titulo}"?`)) return;
+  try {
+    await apiPost({ action: "delete", payload: { id } });
+    items = items.filter(i => i.id !== id);
+    renderAll();
+    showToast("🗑️ Removido da lista");
+  } catch {
+    showToast("Erro ao remover 😢", "error");
+  }
+}
+
+function renderAll() {
+  updateStats();
+  renderCards();
+  document.getElementById("stats-bar").style.opacity = "1";
+}
+
+function renderCards() {
+  const q     = document.getElementById("search").value.trim().toLowerCase();
+  const grid  = document.getElementById("cards-grid");
+  const empty = document.getElementById("empty-state");
+
+  let filtered = items.filter(item => {
+    const matchFilter =
+      activeFilter === "todos"     ? true :
+      activeFilter === "assistido" ? item.status === "Já Assistido" :
+                                     item.tipo === activeFilter;
+    const matchSearch = !q || item.titulo?.toLowerCase().includes(q) || item.genero?.toLowerCase().includes(q);
+    return matchFilter && matchSearch;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = "";
+    empty.classList.remove("hidden");
+    empty.classList.add("flex");
+    return;
+  }
+  empty.classList.add("hidden");
+  empty.classList.remove("flex");
+  grid.innerHTML = filtered.map((item, idx) => cardHTML(item, idx)).join("");
+}
+
+function cardHTML(item, idx) {
+  const watched  = item.status === "Já Assistido";
+  const nota     = parseInt(item.nota) || 0;
+  const stars    = Array.from({length:5}).map((_,i) => `<span class="${i < nota ? 'lit' : ''}">★</span>`).join("");
+  const platform = item.plataforma || "";
+  const delay    = Math.min(idx * 40, 300);
+
+  const platformColors = {
+    "Netflix":"#E50914","Prime Video":"#00A8E1","Disney+":"#113CCF",
+    "Max":"#0029FF","Apple TV+":"#fff","Globoplay":"#FF0C0C",
+    "Paramount+":"#0064FF","Crunchyroll":"#F47521","Cinema":"#e8432d",
+    "YouTube":"#FF0000","Outro":"#555"
+  };
+  const pc = platformColors[platform] || "#555";
+
+  return `
+  <div class="media-card bg-card rounded-xl overflow-hidden flex flex-col animate-slide-up ${watched ? 'opacity-60' : ''}"
+       style="animation-delay:${delay}ms">
+    <div class="h-1 shrink-0" style="background:${pc}"></div>
+    <div class="p-3 sm:p-4 flex flex-col flex-1 gap-2.5">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1 min-w-0">
+          <h3 class="font-semibold text-text text-sm leading-snug line-clamp-2 ${watched ? 'line-through decoration-muted/50' : ''}">
+            ${escHtml(item.titulo || "")}
+          </h3>
+        </div>
+        <span class="badge shrink-0 ${item.tipo === 'Série' ? 'bg-blue-500/15 text-blue-400' : 'bg-accent/15 text-accent'}">
+          ${item.tipo === 'Série' ? '📺' : '🎬'} ${item.tipo}
+        </span>
+      </div>
+      <div class="flex flex-wrap gap-1.5 text-xs text-muted">
+        ${item.genero ? `<span class="bg-border rounded px-2 py-0.5">${escHtml(item.genero)}</span>` : ""}
+        ${platform ? `<span class="rounded px-2 py-0.5" style="background:${pc}22;color:${pc === '#fff' ? '#aaa' : pc}">${escHtml(platform)}</span>` : ""}
+      </div>
+      <div class="stars-display flex gap-0.5 text-sm">${stars}</div>
+      <div class="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
+        <span class="text-xs ${watched ? 'text-green-500' : 'text-muted'}">
+          ${watched ? '✅ Assistido' : '⏳ Na fila'}
+        </span>
+        <div class="flex gap-0.5">
+          <button onclick="markWatched('${item.id}')"
+            title="${watched ? 'Mover para fila' : 'Marcar como assistido'}"
+            class="action-btn rounded-xl text-muted hover:text-green-400 hover:bg-green-500/10 transition-colors text-sm">
+            ${watched ? '↩' : '✓'}
+          </button>
+          <button onclick="openEditModal('${item.id}')"
+            title="Editar"
+            class="action-btn rounded-xl text-muted hover:text-blue-400 hover:bg-blue-500/10 transition-colors">
+            ✏️
+          </button>
+          <button onclick="deleteItem('${item.id}')"
+            title="Remover"
+            class="action-btn rounded-xl text-muted hover:text-accent hover:bg-accent/10 transition-colors text-sm">
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function updateStats() {
+  document.getElementById("stat-total").textContent   = items.length;
+  document.getElementById("stat-filmes").textContent  = items.filter(i => i.tipo === "Filme").length;
+  document.getElementById("stat-series").textContent  = items.filter(i => i.tipo === "Série").length;
+  document.getElementById("stat-watched").textContent = items.filter(i => i.status === "Já Assistido").length;
+}
+
+function openModal() {
+  editingId = null;
+  document.getElementById("modal-title").textContent = "NOVO ITEM";
+  document.getElementById("item-form").reset();
+  document.getElementById("form-id").value = "";
+  document.getElementById("modal").classList.remove("hidden");
+  setTimeout(() => document.getElementById("form-titulo").focus(), 200);
+}
+
+function openEditModal(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  editingId = id;
+  document.getElementById("modal-title").textContent = "EDITAR ITEM";
+  document.getElementById("form-id").value           = id;
+  document.getElementById("form-titulo").value       = item.titulo     || "";
+  document.getElementById("form-tipo").value         = item.tipo       || "";
+  document.getElementById("form-genero").value       = item.genero     || "";
+  document.getElementById("form-plataforma").value   = item.plataforma || "";
+  document.getElementById("form-status").value       = item.status     || "Quero Assistir";
+  const nota = parseInt(item.nota) || 1;
+  const radio = document.getElementById(`s${nota}`);
+  if (radio) radio.checked = true;
+  document.getElementById("modal").classList.remove("hidden");
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.add("hidden");
+  editingId = null;
+}
+
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+function setFilter(filter, btn) {
+  activeFilter = filter;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  syncNav(filter);
+  renderCards();
+}
+
+function setFilterNav(filter, btn) {
+  activeFilter = filter;
+  document.querySelectorAll(".nav-tab").forEach(b => b.classList.remove("active-nav"));
+  btn.classList.add("active-nav");
+  document.querySelectorAll(".tab-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.filter === filter);
+  });
+  renderCards();
+}
+
+function syncNav(filter) {
+  document.querySelectorAll(".nav-tab").forEach(b => {
+    b.classList.toggle("active-nav", b.dataset.nav === filter);
+  });
+}
+
+let toastTimer;
+function showToast(msg, type = "success") {
+  const t     = document.getElementById("toast");
+  const icon  = document.getElementById("toast-icon");
+  const msgEl = document.getElementById("toast-msg");
+  icon.textContent  = type === "error" ? "⚠" : "✓";
+  msgEl.textContent = msg;
+  t.style.borderColor = type === "error" ? "#e8432d55" : "#2a2a3a";
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3000);
+}
+
+function showSkeletons() {
+  const grid = document.getElementById("cards-grid");
+  grid.innerHTML = Array.from({length:4}).map((_,i) =>
+    `<div class="skeleton h-36 ${i > 0 ? 'hidden sm:block' : ''}" style="animation-delay:${i * 100}ms"></div>`
+  ).join("");
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function loadDemo() {
+  items = [
+    { id:"d1", titulo:"Duna: Parte Dois", tipo:"Filme", genero:"Ficção Científica", plataforma:"Max", nota:5, status:"Já Assistido", criadoEm:"" },
+    { id:"d2", titulo:"The Bear", tipo:"Série", genero:"Drama", plataforma:"Disney+", nota:4, status:"Quero Assistir", criadoEm:"" },
+    { id:"d3", titulo:"Alien: Romulus", tipo:"Filme", genero:"Terror", plataforma:"Disney+", nota:4, status:"Quero Assistir", criadoEm:"" },
+    { id:"d4", titulo:"Shogun", tipo:"Série", genero:"Drama", plataforma:"Disney+", nota:5, status:"Já Assistido", criadoEm:"" },
+    { id:"d5", titulo:"Deadpool & Wolverine", tipo:"Filme", genero:"Ação", plataforma:"Disney+", nota:3, status:"Já Assistido", criadoEm:"" },
+    { id:"d6", titulo:"Severance", tipo:"Série", genero:"Thriller", plataforma:"Apple TV+", nota:5, status:"Quero Assistir", criadoEm:"" },
+  ];
+  renderAll();
+  showToast("🎬 Modo demo ativo");
+}
+</script>
+</body>
+</html>
